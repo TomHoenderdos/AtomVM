@@ -52,7 +52,7 @@ jobs:
         with:
           otp-version: "28"
           elixir-version: "1.19"
-          rebar3-version: "3.25.1"
+          rebar3-version: "3.27.1"
           hexpm-mirrors: |
             https://builds.hex.pm
             https://repo.hex.pm
