@@ -18,8 +18,17 @@ extra configuration.
 
 An existing clone needs `git submodule update --init --recursive` once.
 
-Requires ESP-IDF v5.5.5. The AtomGL submodule carries the ST7789 rotation-3
-fix; without it the panel is silently black, with no error anywhere in Elixir.
+Requires ESP-IDF v5.5.5. The AtomGL submodule tracks upstream
+(https://github.com/atomvm/atomgl.git, `main`), which carries the ST7789
+rotation-3 fix (atomgl PR #16); without it the panel is silently black, with
+no error anywhere in Elixir.
+
+libsodium is not a submodule: `components/libatomvm/idf_component.yml`
+(committed) pins it as `espressif/libsodium ^1.0.22~1` and the component
+manager fetches it. `main/idf_component.yml` is gitignored, as upstream has it.
+
+The cJSON NIFs are on by default. Turn them off with
+`AVM_ENABLE_CJSON_NIFS=n` (menuconfig, in the avm_builtins component).
 
 If you need to build *without* Elixir support or libsodium (e.g. reproducing
 upstream), pass `-DATOMVM_ELIXIR_SUPPORT=off` / `-DAVM_USE_LIBSODIUM=OFF`
@@ -44,3 +53,26 @@ build directory and the generated `sdkconfig` first.
 `@AVM_PARTITION_TABLE_FILENAME@`) on every configure. Edit
 `sdkconfig.defaults.in`, not `sdkconfig.defaults` -- hand edits to the
 generated file are silently discarded on the next `set-target`.
+
+## boot.avm
+
+boot.avm is the Elixir standard library image. Build it from the repo root:
+
+    cmake -B build .
+    cmake --build build --target elixir_esp32boot
+
+The output is `build/libs/esp32boot/elixir_esp32boot.avm`. It must fit the
+0x88000 (557056 byte) `boot.avm` partition. Beams embed the build path, so a
+long checkout path grows the image by about 96 bytes per module. With OTP 28
+and Elixir 1.19 (what CI uses) it comes to about 530 KB.
+
+## Memory
+
+Internal RAM is the scarce one (~300K); see the comments in
+`sdkconfig.defaults.in` for why each setting is there. The set that matters
+is `SPIRAM_MALLOC_ALWAYSINTERNAL=64`, no `MBEDTLS_DYNAMIC_BUFFER`, and software
+AES. With the older config, internal RAM fell to 3 KB after a NervesHub TLS
+connect (esp-aes "Failed to allocate memory", then an SPI DMA failure and an
+abort). With it, internal RAM stays around 140 KB. Watch it with
+`:erlang.system_info(:esp32_internal_free_size)` and
+`:esp32_internal_largest_free_block`.
