@@ -63,8 +63,9 @@ boot.avm is the Elixir standard library image. Build it from the repo root:
 
 The output is `build/libs/esp32boot/elixir_esp32boot.avm`. It must fit the
 0x88000 (557056 byte) `boot.avm` partition. Beams embed the build path, so a
-long checkout path grows the image by about 96 bytes per module. With OTP 28
-and Elixir 1.19 (what CI uses) it comes to about 530 KB.
+long checkout path grows the image by about 96 bytes per module. The Erlang
+and Elixir versions are pinned in `.tool-versions` (read by asdf, mise and
+CI); with that toolchain it comes to about 530 KB.
 
 ## Memory
 
