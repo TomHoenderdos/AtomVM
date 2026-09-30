@@ -35,8 +35,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-        with:
-          submodules: recursive
 
       - uses: erlef/setup-beam@v1
         with:
@@ -58,6 +56,8 @@ jobs:
           make -C build elixir_esp32boot
           mkdir -p out
           cp build/libs/esp32boot/elixir_esp32boot.avm out/boot.avm
+          size=$(stat -c%s out/boot.avm)
+          [ "$size" -le 557056 ] || { echo "boot.avm $size > 557056"; exit 1; }
 
       - uses: actions/upload-artifact@v7
         with:

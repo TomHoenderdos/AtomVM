@@ -20,21 +20,28 @@ CONFIG_SPIRAM_USE_MALLOC=y
 # collect - until a websocket client could not allocate its task. At 512 the
 # same happened to every refc binary a Bluesky session holds (posts, feeds,
 # TLS read chunks), until handshakes stalled. 64 is where AtomVM's own heap
-# binaries end, so every refc binary lives in PSRAM.
+# binaries end, so every refc binary lives in PSRAM. At the IDF default
+# (16384) the firmware boot-loops ~5 s in: "spi_master: Failed to allocate priv
+# TX buffer", then abort().
 CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=64
 CONFIG_SPIRAM_IGNORE_NOTFOUND=y
 
 # TLS working memory lives in PSRAM. Internal RAM cannot hold it: DMA buffers
 # must be internal, and a handshake under DEFAULT_MEM_ALLOC starved the LED
-# driver's DMA allocation and crashed it mid-handshake.
+# driver's DMA allocation and crashed it mid-handshake. Without it, minimum
+# free internal RAM fell from ~139K to ~76K (largest block 64K to 31K) and the
+# first Chat visit never connected.
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 
 # libsodium's Ed25519 verification overflows the 3584-byte default main task
-# stack. The symptom is a reset on the first update, not a bad-signature report.
+# stack: "A stack overflow in task main has been detected", then a reboot loop
+# (a sign or verify on the scheduler is enough). nerves_hub_link_atomvm_esp32
+# also ships an overlay requiring 16384. The badge configures no fwup public
+# keys today, so updates do not currently exercise this.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 
-# -Og left the VM at 98.2% of `factory`, which TLS 1.3 then overflowed by 384
-# bytes. Assertions are a separate knob and stay on.
+# At -Og the VM is 99% of `factory` (17920 B spare) and slower. Assertions are
+# a separate knob and stay on.
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 
 # A TLS handshake is seconds of ECC on this core, and some proxy edges will
