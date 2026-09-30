@@ -202,19 +202,10 @@ handshake_loop(SSLContext, Socket) ->
             end;
         want_write ->
             % We're currrently missing non-blocking writes
-            wait_writable(),
             handshake_loop(SSLContext, Socket);
         {error, _Reason} = Error ->
             socket:close(Socket),
             Error
-    end.
-
-%% A socket that cannot take data yet is retried a tick later. Retrying at once
-%% never yields, so under memory pressure the scheduler spins and the task
-%% watchdog fires.
-wait_writable() ->
-    receive
-    after 10 -> ok
     end.
 
 -spec process_options(
@@ -270,7 +261,6 @@ close_notify_loop(SSLContext, Socket) ->
             end;
         want_write ->
             % We're currrently missing non-blocking writes
-            wait_writable(),
             close_notify_loop(SSLContext, Socket);
         {error, _Reason} = Error ->
             socket:close(Socket),
@@ -301,7 +291,6 @@ send({SSLContext, Socket} = SSLSocket, Binary) ->
             end;
         want_write ->
             % We're currrently missing non-blocking writes
-            wait_writable(),
             send(SSLSocket, Binary);
         {error, _Reason} = Error ->
             Error
@@ -337,7 +326,6 @@ recv0({SSLContext, Socket} = SSLSocket, Length, Remaining, Acc) ->
             end;
         want_write ->
             % We're currrently missing non-blocking writes
-            wait_writable(),
             recv0(SSLSocket, Length, Remaining, Acc);
         {error, _Reason} = Error ->
             Error
