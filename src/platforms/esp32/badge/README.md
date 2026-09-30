@@ -13,6 +13,7 @@ anything from here. Both builds share `managed_components/` and
 | `partitions.csv` | Badge partition table |
 | `components/atomgl` | Display driver (git submodule, upstream atomgl `main`) |
 | `components/atomvm_websocket_client` | WebSocket client (git submodule) |
+| `components/atomvm_espnow` | ESP-NOW port driver (git submodule, upstream `main`). Open the `espnow` port once and keep it: `espnow:close/1` frees the driver's port data while its static pointer and ESP-NOW stay live (use-after-free on upstream AtomVM, which frees `platform_data` in `context_destroy`). |
 | `components/badge` | Pulls in libsodium and compiles mbedTLS at `-O2` |
 
 ## Building
