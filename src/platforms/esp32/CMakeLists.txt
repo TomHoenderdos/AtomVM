@@ -21,14 +21,6 @@
 cmake_minimum_required (VERSION 3.13)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-# Badge-fork defaults for a bare `idf.py build` (explicit -D still wins) -- see BADGE-BUILD.md.
-if (NOT DEFINED ATOMVM_ELIXIR_SUPPORT)
-    set(ATOMVM_ELIXIR_SUPPORT on)
-endif()
-if (NOT DEFINED AVM_USE_LIBSODIUM)
-    set(AVM_USE_LIBSODIUM ON CACHE BOOL "Badge fork default: use libsodium" FORCE)
-endif()
-
 # Don't try to link when testing availability of functions
 set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
@@ -56,17 +48,6 @@ if (${IDF_TARGET} MATCHES "esp32s2|esp32c2|esp32c3|esp32c5|esp32c6|esp32c61|esp3
     message("Disabling SMP as selected target only has one core")
     set(AVM_DISABLE_SMP YES FORCE)
     set(HAVE_PLATFORM_ATOMIC_H ON)
-endif()
-
-# esp32/esp32s3 disable the S32C1I hardware CAS instruction whenever SPIRAM is
-# on (-mdisable-hardware-atomics, a real S32C1I/PSRAM errata workaround), so
-# libAtomVM's ATOMIC_POINTER_LOCK_FREE probe fails to compile. That probe only
-# tests lock-freedom, not availability: IDF still supplies correct
-# interrupt-safe __atomic_* libcalls. HAVE_PLATFORM_ATOMIC_H is not the fix
-# here -- upstream only pairs it with AVM_DISABLE_SMP, and esp32/esp32s3 are
-# dual-core.
-if (${IDF_TARGET} STREQUAL "esp32" OR ${IDF_TARGET} STREQUAL "esp32s3")
-    set(ATOMIC_POINTER_LOCK_FREE_IS_TWO ON CACHE BOOL "" FORCE)
 endif()
 
 # ESP32-C5 has limited flash space, use minimal opcodes to reduce VM size
@@ -165,12 +146,3 @@ endif()
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nvs_partition.csv")
     nvs_create_partition_image(nvs "${CMAKE_CURRENT_SOURCE_DIR}/nvs_partition.csv")
 endif()
-
-# The global -Os is slowest exactly where the TLS handshake spends its time.
-# ECC verification has to beat ngrok's ~1s edge deadline, so the crypto
-# objects alone are compiled for speed.
-foreach(crypto_target mbedcrypto mbedtls mbedx509)
-    if(TARGET ${crypto_target})
-        target_compile_options(${crypto_target} PRIVATE -O2)
-    endif()
-endforeach()
