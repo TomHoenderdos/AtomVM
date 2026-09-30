@@ -29,12 +29,6 @@ CONFIG_SPIRAM_IGNORE_NOTFOUND=y
 # driver's DMA allocation and crashed it mid-handshake.
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 
-# No dynamic TLS buffers. They free the peer and CA certificates after the
-# handshake, which otp_ssl's contexts free again when the GC collects them:
-# heap corruption after "Certificate validated", or a TLSF assert in
-# sslcontext_dtor. The fixed 16K in and 4K out live in PSRAM, as above.
-# CONFIG_MBEDTLS_DYNAMIC_BUFFER is not set
-
 # Software AES. The AES peripheral works by DMA, and every operation takes its
 # descriptors from internal DMA RAM; once that is tight a handshake fails with
 # "esp-aes: Failed to allocate memory" and {ssl,-1}.
