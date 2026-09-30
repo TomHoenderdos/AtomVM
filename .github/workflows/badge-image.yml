@@ -22,25 +22,15 @@ jobs:
         shell: bash
         run: |
           . $IDF_PATH/export.sh
-          cd src/platforms/esp32
-          idf.py set-target esp32s3
-          idf.py build
-
-      - name: Collect artifacts
-        shell: bash
-        run: |
-          mkdir -p out
-          cp src/platforms/esp32/build/atomvm-esp32.bin out/atomvm-esp32s3-badge.bin
-          cp src/platforms/esp32/build/bootloader/bootloader.bin out/
-          cp src/platforms/esp32/build/partition_table/partition-table.bin out/
+          src/platforms/esp32/badge/build.sh --vm-only
 
       - uses: actions/upload-artifact@v7
         with:
           name: vm
-          path: out/
+          path: src/platforms/esp32/build-badge/out/
 
-  # The esp32 build emits no .avm at all, so the standard libraries the VM
-  # starts from come from a separate host build.
+  # The IDF container has no Erlang/Elixir, so boot.avm (the standard
+  # libraries the VM starts from) comes from a separate host build.
   boot:
     runs-on: ubuntu-24.04
     steps:
