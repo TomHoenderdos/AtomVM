@@ -1,8 +1,10 @@
 # Badge build overlay
 
 Everything the badge build needs beyond upstream AtomVM lives in this
-directory. The upstream esp32 build (`idf.py build` in `src/platforms/esp32`)
-is untouched by it and does not compile anything from here.
+directory. The overlay adds nothing to the upstream esp32 build (`idf.py build`
+in `src/platforms/esp32`) except the patches listed below, and does not compile
+anything from here. Both builds share `managed_components/` and
+`dependencies.lock` in that project directory.
 
 | File | What it does |
 | --- | --- |
@@ -44,27 +46,35 @@ configures a second time: `AVM_CREATE_STACKTRACES` and
 `AVM_PRINT_PROCESS_CRASH_DUMPS` are declared after libAtomVM is configured,
 so only the second configure turns them on.
 
-To flash by hand: bootloader at `0x0`, partition table at `0x8000`, VM at
-`0x10000`, `boot.avm` at `0x1F0000`.
+To flash by hand: bootloader `0x0`, partition table `0x8000`, VM `0x10000`,
+`boot.avm` `0x1F0000`, `assets.avm` `0x278000`, `main.avm` `0x2B8000`,
+`alt.avm` `0x35C000`. Never erase NVS at `0x9000`.
+
+The display needs atomgl with the ST7789 rotation-3 fix (atomgl PR #16);
+without it the panel is silently black. Keep that in mind when moving the
+atomgl pin.
 
 ## boot.avm
 
 `boot.avm` is the Elixir standard library image
 (`build/libs/esp32boot/elixir_esp32boot.avm` from a host build). `build.sh`
 runs the host build under `mise exec`, so it uses the Erlang and Elixir
-pinned in the repo's `.tool-versions` (CI reads the same file); without mise
-it uses whatever is on `PATH`. It must fit the 0x88000 (557056 byte)
+pinned in the repo's `.tool-versions` (CI reads the same file; it matches
+`../firmware`'s, keep them in sync); without mise it uses whatever is on
+`PATH`. By hand, at the repo root:
+`cmake -B build . && cmake --build build --target elixir_esp32boot`. It must fit the 0x88000 (557056 byte)
 `boot.avm` partition, and `build.sh` fails if it does not. Beams embed the
 build path, so a long checkout path grows it by about 96 bytes per module.
 With the pinned toolchain it is about 510 KB.
 
 ## Memory
 
-Internal RAM is the scarce one (~300K). The settings that matter are
-`SPIRAM_MALLOC_ALWAYSINTERNAL=64`, no `MBEDTLS_DYNAMIC_BUFFER`, and software
-AES (see `sdkconfig.badge`). Without them internal RAM fell to 3 KB after a
-NervesHub TLS connect (esp-aes "Failed to allocate memory", then an SPI DMA
-failure and an abort); with them it stays around 140 KB. Watch it with
+Internal RAM is the scarce one (~300K); it stays above ~140 KB free across
+Chat, Schedule and Update. The settings that keep it there are
+`SPIRAM_MALLOC_ALWAYSINTERNAL=64` and `MBEDTLS_EXTERNAL_MEM_ALLOC` (see
+`sdkconfig.badge` for the evidence). Leave `MBEDTLS_DYNAMIC_BUFFER` off: it
+frees the peer/CA certs after the handshake, and otp_ssl's contexts free them
+again in `sslcontext_dtor` (heap corruption). Watch memory with
 `:erlang.system_info(:esp32_internal_free_size)` and
 `:esp32_internal_largest_free_block`.
 
@@ -74,12 +84,13 @@ These are code changes no build flag can express, so they stay in the
 upstream tree:
 
 - `src/libAtomVM/otp_ssl.c`, `libs/estdlib/src/ssl.erl`: verify TLS peers
-  against the ESP-IDF certificate bundle; back off on `want_write` instead of
-  spinning.
+  against the ESP-IDF certificate bundle. Upstream rejects
+  `{verify, verify_peer}` with `function_clause` (issue #2401); drop this once
+  atomvm/AtomVM#2390 lands and the firmware passes `cacerts: :crt_bundle`.
 - `components/avm_builtins/cjson_nif.c` (+ `Kconfig`, `CMakeLists.txt`):
   cJSON NIFs, on by default; turn off with `AVM_ENABLE_CJSON_NIFS=n`.
 - `components/avm_sys/sys.c`: the `esp32_internal_*` `system_info` keys.
-- `components/avm_builtins/network_driver.c`, `libs/avm_network/src/network.erl`:
-  let the application choose the wifi power save mode.
 - `GetBootAVM.cmake`: select the boot library for any non-JIT partition
-  table, not only ones with `main.avm` at `0x250000`.
+  table, not only ones with `main.avm` at `0x250000` (upstream PR candidate:
+  otherwise custom layouts get "esp32boot flavor: NONE" and `idf.py flash`
+  skips `boot.avm`).
