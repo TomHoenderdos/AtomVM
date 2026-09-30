@@ -1,0 +1,3 @@
+# libsodium backs AVM_USE_LIBSODIUM (Ed25519), which badge/build.sh turns on.
+dependencies:
+  espressif/libsodium: "^1.0.22~1"
