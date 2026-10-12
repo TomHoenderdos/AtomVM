@@ -51,8 +51,7 @@ maybe_start_dev_mode(SystemStatus) ->
 % /dev/partition/by-name/app2.avm
 
 boot() ->
-    BootPath = get_boot_path(),
-    case atomvm:add_avm_pack_file(BootPath, [{name, app}]) of
+    case add_app_pack(get_boot_paths()) of
         ok ->
             StartModule = get_start_module(),
             DevOnExit = is_dev_mode_enabled(app_exit),
@@ -80,12 +79,31 @@ boot() ->
             timer:sleep(infinity)
     end.
 
-get_boot_path() ->
+-define(DEFAULT_BOOT_PATH, "/dev/partition/by-name/main.avm").
+
+% A boot_path left pointing at a partition that no longer exists, or at one
+% that does not hold a valid pack, falls back to the default rather than
+% stopping the device.
+get_boot_paths() ->
     case esp:nvs_get_binary(atomvm, boot_path) of
         undefined ->
-            "/dev/partition/by-name/main.avm";
+            [?DEFAULT_BOOT_PATH];
         Path ->
-            binary_to_list(Path)
+            case binary_to_list(Path) of
+                ?DEFAULT_BOOT_PATH -> [?DEFAULT_BOOT_PATH];
+                Configured -> [Configured, ?DEFAULT_BOOT_PATH]
+            end
+    end.
+
+add_app_pack([Path]) ->
+    atomvm:add_avm_pack_file(Path, [{name, app}]);
+add_app_pack([Path | Fallbacks]) ->
+    case atomvm:add_avm_pack_file(Path, [{name, app}]) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            io:format("Cannot open ~s: ~p, falling back.~n", [Path, Reason]),
+            add_app_pack(Fallbacks)
     end.
 
 get_start_module() ->
