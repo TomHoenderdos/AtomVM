@@ -48,8 +48,9 @@ configures a second time: `AVM_CREATE_STACKTRACES` and
 so only the second configure turns them on.
 
 To flash by hand: bootloader `0x0`, partition table `0x8000`, VM `0x10000`,
-`boot.avm` `0x1F0000`, `assets.avm` `0x278000`, `updater.avm` `0x2B8000`
-(192K), `main.avm` `0x2E8000` (1120K). Never erase NVS at `0x9000`.
+`boot.avm` `0x1F0000`, `updater.avm` `0x278000` (192K), `main.avm`
+`0x2A8000` (1376K). Never erase NVS at `0x9000`. The firmware carries its
+fonts and images in its own `priv/`; there is no assets partition.
 
 `esp32init` runs the pack named by NVS `atomvm/boot_path`, or `main.avm` when
 it is unset. The firmware points `boot_path` at `updater.avm` to install an
