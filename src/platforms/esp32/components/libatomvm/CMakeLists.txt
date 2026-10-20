@@ -51,6 +51,9 @@ avm_get_system_architecture_string(AVM_SYSTEM_ARCHITECTURE_STRING PLATFORM_OS es
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../libAtomVM" "libAtomVM")
 
+# The interpreter at -O2; the rest of the image stays at -Os to fit `factory`.
+target_compile_options(libAtomVM PRIVATE -O2)
+
 # Add directory with platform_atomic.h if we mean to use it
 if (HAVE_PLATFORM_ATOMIC_H)
     target_include_directories(libAtomVM PUBLIC ../avm_sys/)

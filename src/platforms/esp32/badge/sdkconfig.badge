@@ -44,6 +44,10 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 # a separate knob and stay on.
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
 
+# The interpreter runs from flash; a 32K instruction cache and -O2 for
+# libAtomVM (components/libatomvm) cut an Elixir frame from ~150 to ~42 ms.
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
+
 # A TLS handshake is seconds of ECC on this core, and some proxy edges will
 # not wait (ngrok's https edge hangs up ~1s after its server flight, measured
 # with a stalled-handshake proxy). 240MHz keeps the handshake short; the rest
