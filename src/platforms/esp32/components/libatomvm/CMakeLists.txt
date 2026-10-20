@@ -54,6 +54,11 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../libAtomVM" "libAtomVM"
 # The interpreter at -O2; the rest of the image stays at -Os to fit `factory`.
 target_compile_options(libAtomVM PRIVATE -O2)
 
+# context.c holds the interpreter loop, one function too large for -O2's
+# inlining: a `j` goes out of range in the assembler. Less inlining fits.
+get_filename_component(AVM_CONTEXT_C "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libAtomVM/context.c" ABSOLUTE)
+set_source_files_properties(${AVM_CONTEXT_C} TARGET_DIRECTORY libAtomVM PROPERTIES COMPILE_OPTIONS "-fno-inline-small-functions;-fno-inline-functions")
+
 # Add directory with platform_atomic.h if we mean to use it
 if (HAVE_PLATFORM_ATOMIC_H)
     target_include_directories(libAtomVM PUBLIC ../avm_sys/)
